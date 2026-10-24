@@ -1,4 +1,4 @@
-name: Build ResoPrint (MSVC x64)
+name: Build risoprint (MSVC x64)
 
 on:
   push:
@@ -40,18 +40,18 @@ jobs:
       - name: Configure CMake (Visual Studio 2022 x64 MSVC)
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
-      - name: Build ResoPrint Target (Release MSVC)
-        run: cmake --build build --config Release --target ResoPrint --parallel
+      - name: Build risoprint Target (Release MSVC)
+        run: cmake --build build --config Release --target risoprint --parallel
 
-      - name: Locate and Verify ResoPrint.aex
+      - name: Locate and Verify risoprint.aex
         shell: pwsh
         run: |
           $candidates = @(
-            "build/bin/Release/ResoPrint.aex",
-            "build/bin/ResoPrint.aex",
-            "build/Release/ResoPrint.aex",
-            "build/ResoPrint.aex",
-            "dist/ResoPrint.aex"
+            "build/bin/Release/risoprint.aex",
+            "build/bin/risoprint.aex",
+            "build/Release/risoprint.aex",
+            "build/risoprint.aex",
+            "dist/risoprint.aex"
           )
           $aexPath = $null
           foreach ($cand in $candidates) {
@@ -65,7 +65,7 @@ jobs:
             if ($found) { $aexPath = $found.FullName }
           }
           if (-not $aexPath) {
-            Write-Error "ResoPrint.aex was not produced by the build."
+            Write-Error "risoprint.aex was not produced by the build."
             exit 1
           }
 
@@ -87,12 +87,12 @@ jobs:
             Write-Host "Copied $srcFull -> $dst"
           }
 
-          Safe-Copy $aexPath "dist/ResoPrint.aex"
-          Safe-Copy $aexPath "public/dist/ResoPrint.aex"
-          Safe-Copy $aexPath "public/ResoPrint.aex"
-          Safe-Copy $aexPath "ResoPrint.aex"
+          Safe-Copy $aexPath "dist/risoprint.aex"
+          Safe-Copy $aexPath "public/dist/risoprint.aex"
+          Safe-Copy $aexPath "public/risoprint.aex"
+          Safe-Copy $aexPath "risoprint.aex"
 
-          $finalAex = Get-Item "dist/ResoPrint.aex"
+          $finalAex = Get-Item "dist/risoprint.aex"
           Write-Host "=========================================="
           Write-Host "BUILT AEX ARTIFACT FOR VERIFICATION:"
           Write-Host "Path: $($finalAex.FullName)"
@@ -102,9 +102,9 @@ jobs:
           Write-Host "=========================================="
 
           if ($env:GITHUB_STEP_SUMMARY) {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '### ResoPrint Build Success'
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Artifact Name: ResoPrint'
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Plugin File: ResoPrint.aex'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '### risoprint Build Success'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Artifact Name: risoprint'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Plugin File: risoprint.aex'
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ("- File Size: {0} bytes" -f $finalAex.Length)
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ("- SHA-256: {0}" -f $hash)
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Subsystem: Windows GUI 6.0 (MSVC x64)'
@@ -115,15 +115,15 @@ jobs:
           $env:PYTHONIOENCODING = "utf-8"
           python ae/verify_build.py $finalAex.FullName
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "Verification failed for built ResoPrint.aex"
+            Write-Error "Verification failed for built risoprint.aex"
             exit 1
           }
 
           dumpbin /headers /exports /dependents $finalAex.FullName
 
-      - name: Upload ResoPrint Artifact
+      - name: Upload risoprint Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ResoPrint-AEX
-          path: dist/ResoPrint.aex
+          name: risoprint-AEX
+          path: dist/risoprint.aex
           if-no-files-found: error

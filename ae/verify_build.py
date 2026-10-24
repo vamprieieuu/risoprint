@@ -18,8 +18,13 @@ def verify(path):
     blob=data[rsrc[3]:rsrc[3]+rsrc[4]]
     if b'MIB8dnik' not in blob: raise SystemExit('[FAIL] PiPL signature missing')
     if b'EffectMain' not in blob: raise SystemExit('[FAIL] EffectMain missing')
-    if b'ResoPrint' not in blob: raise SystemExit('[FAIL] ResoPrint metadata missing')
-    print('[OK] PE x64 + PiPL + EffectMain + ResoPrint metadata verified')
+    if b'risoprint' not in blob: raise SystemExit('[FAIL] risoprint metadata missing')
+    # AE plugin version field must use PF_VERSION encoding. For code 1.0.0 RELEASE build 1
+    # this is 0x00080601 (little-endian bytes 01 06 08 00), matching the known-good reference.
+    if b'MIB8REVe' not in blob: raise SystemExit('[FAIL] PiPL AE_Effect_Version property missing')
+    pos=blob.find(b'MIB8REVe')
+    if blob[pos+16:pos+20] != b'\x01\x06\x08\x00': raise SystemExit('[FAIL] PiPL version encoding mismatch')
+    print('[OK] PE x64 + PiPL + EffectMain + risoprint metadata verified')
     return True
 
-if __name__=='__main__': verify(sys.argv[1] if len(sys.argv)>1 else 'dist/ResoPrint.aex')
+if __name__=='__main__': verify(sys.argv[1] if len(sys.argv)>1 else 'dist/risoprint.aex')

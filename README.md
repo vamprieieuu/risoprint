@@ -1,6 +1,6 @@
-# ResoPrint — native After Effects Risograph Effect
+# risoprint — native After Effects Risograph Effect
 
-ResoPrint is a native Windows x64 `.aex` effect for Adobe After Effects. Its build/registration skeleton is based on the known-good `Dithering_MAJEED_build_ready` repository structure, while the render engine is new and dedicated to the three-plate risograph look.
+risoprint is a native Windows x64 `.aex` effect for Adobe After Effects. Its build/registration skeleton is based on the known-good `Dithering_MAJEED_build_ready` repository structure, while the render engine is new and dedicated to the three-plate risograph look.
 
 ## Engine
 
@@ -33,6 +33,15 @@ The defaults match the supplied reference settings screenshots:
 
 ## Build
 
-GitHub Actions uses Windows 2022 + MSVC x64 + CMake, matching the proven reference approach. The final artifact is `ResoPrint.aex`.
+GitHub Actions uses Windows 2022 + MSVC x64 + CMake, matching the proven reference approach. The final artifact is `risoprint.aex`.
 
 Target After Effects: Windows x64, including the user's AE 2023 / 23.x environment.
+
+
+## Current build/runtime fixes
+- Plugin display/match name: `risoprint`
+- PiPL `AE_Effect_Version` uses the Adobe `PF_VERSION` encoding required by the reference build (`01 06 08 00` for code version 1.0.0 RELEASE build 1).
+- CMake has one real plugin target (`risoprint`) and no same-name custom target, preventing MSBuild circular dependencies.
+- Exposed controls: Intensity, Blend, Show Source, Paper, Ink Contrast, Scale, Opacity, Softness, Contrast, and 3 complete ink plates.
+- Each ink plate exposes Enabled, Ink Color, Separation, Shift X, Shift Y.
+- The engine reads every exposed control during Smart Render.

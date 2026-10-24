@@ -13,14 +13,14 @@ if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME)
     endif()
 endif()
 
-project(ResoPrint LANGUAGES C CXX)
+project(risoprint LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 
 if(NOT WIN32)
-    message(FATAL_ERROR "ResoPrint AEX build requires a Windows x64 target (MSVC or MinGW-w64).")
+    message(FATAL_ERROR "risoprint AEX build requires a Windows x64 target (MSVC or MinGW-w64).")
 endif()
 
 enable_language(RC)
@@ -31,14 +31,14 @@ add_subdirectory(extern/AfterEffectsSDK)
 # Keep this build layout intentionally parallel to the known-good
 # Dithering_MAJEED_build_ready repository. The CMake target itself is the
 # plugin target; there is NO custom target with the same name.
-set(RESOPRINT_AE_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/ae")
-set(RESOPRINT_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/core")
-set(PIPL_R             "${RESOPRINT_AE_DIR}/ResoPrint_PiPL.r")
-set(PIPL_BIN           "${CMAKE_CURRENT_BINARY_DIR}/ResoPrint_PiPL.bin")
-set(PIPL_RC            "${CMAKE_CURRENT_BINARY_DIR}/ResoPrint_PiPL.rc")
-set(PIPL_PY            "${RESOPRINT_AE_DIR}/pipl_gen.py")
-set(RESOPRINT_VERSION_RC "${RESOPRINT_AE_DIR}/ResoPrint_Version.rc")
-set(RESOPRINT_DEF      "${RESOPRINT_AE_DIR}/ResoPrint.def")
+set(RISOPRINT_AE_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/ae")
+set(RISOPRINT_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/core")
+set(PIPL_R             "${RISOPRINT_AE_DIR}/risoprint_PiPL.r")
+set(PIPL_BIN           "${CMAKE_CURRENT_BINARY_DIR}/risoprint_PiPL.bin")
+set(PIPL_RC            "${CMAKE_CURRENT_BINARY_DIR}/risoprint_PiPL.rc")
+set(PIPL_PY            "${RISOPRINT_AE_DIR}/pipl_gen.py")
+set(RISOPRINT_VERSION_RC "${RISOPRINT_AE_DIR}/risoprint_Version.rc")
+set(RISOPRINT_DEF      "${RISOPRINT_AE_DIR}/risoprint.def")
 
 if(NOT EXISTS "${PIPL_R}")
     message(FATAL_ERROR "PiPL source not found: ${PIPL_R}")
@@ -49,33 +49,33 @@ add_custom_command(
     OUTPUT "${PIPL_RC}" "${PIPL_BIN}"
     COMMAND "${Python3_EXECUTABLE}" "${PIPL_PY}" "${PIPL_R}" "${PIPL_RC}" "${PIPL_BIN}"
     DEPENDS "${PIPL_R}" "${PIPL_PY}"
-    COMMENT "Generating ResoPrint_PiPL.rc and ResoPrint_PiPL.bin via pipl_gen.py"
+    COMMENT "Generating risoprint_PiPL.rc and risoprint_PiPL.bin via pipl_gen.py"
     VERBATIM
 )
 
-file(GLOB RESOPRINT_AE_SOURCES CONFIGURE_DEPENDS "${RESOPRINT_AE_DIR}/*.cpp")
-file(GLOB RESOPRINT_CORE_SOURCES CONFIGURE_DEPENDS "${RESOPRINT_CORE_DIR}/*.cpp")
+file(GLOB RISOPRINT_AE_SOURCES CONFIGURE_DEPENDS "${RISOPRINT_AE_DIR}/*.cpp")
+file(GLOB RISOPRINT_CORE_SOURCES CONFIGURE_DEPENDS "${RISOPRINT_CORE_DIR}/*.cpp")
 
-# IMPORTANT: ResoPrint is the actual CMake library target, just as
+# IMPORTANT: risoprint is the actual CMake library target, just as
 # YMDithers is in the reference. Do not create another custom target named
-# ResoPrint; doing so creates a circular ResolveProjectReferences graph in
+# risoprint; doing so creates a circular ResolveProjectReferences graph in
 # Visual Studio/MSBuild.
-add_library(ResoPrint SHARED
+add_library(risoprint SHARED
     "${PIPL_RC}"
-    ${RESOPRINT_AE_SOURCES}
-    ${RESOPRINT_CORE_SOURCES}
+    ${RISOPRINT_AE_SOURCES}
+    ${RISOPRINT_CORE_SOURCES}
 )
 
-target_include_directories(ResoPrint PRIVATE
+target_include_directories(risoprint PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
-    "${RESOPRINT_AE_DIR}"
-    "${RESOPRINT_CORE_DIR}"
+    "${RISOPRINT_AE_DIR}"
+    "${RISOPRINT_CORE_DIR}"
     ${AESDK_INCLUDE}
 )
 
-target_link_libraries(ResoPrint PRIVATE AESDK)
+target_link_libraries(risoprint PRIVATE AESDK)
 
-target_compile_definitions(ResoPrint PRIVATE
+target_compile_definitions(risoprint PRIVATE
     MSWindows
     _WINDOWS
     WIN32
@@ -87,18 +87,18 @@ target_compile_definitions(ResoPrint PRIVATE
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    target_compile_options(ResoPrint PRIVATE /W3 /EHsc /MT /O2 /fp:fast)
-    target_link_options(ResoPrint PRIVATE
+    target_compile_options(risoprint PRIVATE /W3 /EHsc /MT /O2 /fp:fast)
+    target_link_options(risoprint PRIVATE
         /SUBSYSTEM:WINDOWS,6.00
         /OSVERSION:6.00
         /VERSION:6.00
         /MANIFEST:NO
-        /DEF:${RESOPRINT_DEF}
+        /DEF:${RISOPRINT_DEF}
     )
 else()
-    target_compile_options(ResoPrint PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-missing-field-initializers -Wno-unknown-pragmas -O3)
-    target_link_options(ResoPrint PRIVATE
-        "${RESOPRINT_DEF}"
+    target_compile_options(risoprint PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-missing-field-initializers -Wno-unknown-pragmas -O3)
+    target_link_options(risoprint PRIVATE
+        "${RISOPRINT_DEF}"
         -static -static-libgcc -static-libstdc++
         -Wl,--exclude-all-symbols
         -Wl,--kill-at -Wl,-s
@@ -110,9 +110,9 @@ else()
     )
 endif()
 
-set_target_properties(ResoPrint PROPERTIES
+set_target_properties(risoprint PROPERTIES
     PREFIX ""
-    OUTPUT_NAME "ResoPrint"
+    OUTPUT_NAME "risoprint"
     SUFFIX ".aex"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
@@ -122,35 +122,35 @@ set_target_properties(ResoPrint PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/Release"
 )
 
-add_custom_command(TARGET ResoPrint POST_BUILD
+add_custom_command(TARGET risoprint POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/public"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/public/dist"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/dist"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:ResoPrint>"
-        "${CMAKE_BINARY_DIR}/ResoPrint.aex"
+        "$<TARGET_FILE:risoprint>"
+        "${CMAKE_BINARY_DIR}/risoprint.aex"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:ResoPrint>"
-        "${CMAKE_CURRENT_SOURCE_DIR}/public/ResoPrint.aex"
+        "$<TARGET_FILE:risoprint>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/public/risoprint.aex"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:ResoPrint>"
-        "${CMAKE_CURRENT_SOURCE_DIR}/public/dist/ResoPrint.aex"
+        "$<TARGET_FILE:risoprint>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/public/dist/risoprint.aex"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:ResoPrint>"
-        "${CMAKE_CURRENT_SOURCE_DIR}/dist/ResoPrint.aex"
+        "$<TARGET_FILE:risoprint>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/dist/risoprint.aex"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:ResoPrint>"
-        "${CMAKE_CURRENT_SOURCE_DIR}/ResoPrint.aex"
-    COMMENT "Packaging ResoPrint.aex without post-build PE binary patching"
+        "$<TARGET_FILE:risoprint>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/risoprint.aex"
+    COMMENT "Packaging risoprint.aex without post-build PE binary patching"
 )
 
 # Keep the same useful alias pattern as the reference, but with names that
-# cannot collide with the actual ResoPrint target.
-add_custom_target(RESOPRINT_BUILD DEPENDS ResoPrint)
-add_custom_target(ResoPrint_AEX DEPENDS ResoPrint)
+# cannot collide with the actual risoprint target.
+add_custom_target(RISOPRINT_BUILD DEPENDS risoprint)
+add_custom_target(risoprint_AEX DEPENDS risoprint)
 
 set(PLUGIN_FOLDER
     "C:/Program Files/Adobe/Adobe After Effects 2023/Support Files/Plug-ins/"
     CACHE STRING "After Effects plugin folder"
 )
-install(TARGETS ResoPrint DESTINATION "${PLUGIN_FOLDER}")
+install(TARGETS risoprint DESTINATION "${PLUGIN_FOLDER}")
