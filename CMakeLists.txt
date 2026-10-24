@@ -53,8 +53,19 @@ add_custom_command(
     VERBATIM
 )
 
-file(GLOB RISOPRINT_AE_SOURCES CONFIGURE_DEPENDS "${RISOPRINT_AE_DIR}/*.cpp")
-file(GLOB RISOPRINT_CORE_SOURCES CONFIGURE_DEPENDS "${RISOPRINT_CORE_DIR}/*.cpp")
+# Explicit source lists: the known-good reference has one AE entry source and one core source.
+# Do NOT glob here; a stale/duplicate legacy source file would otherwise be linked twice.
+set(RISOPRINT_AE_SOURCES
+    "${RISOPRINT_AE_DIR}/risoprint_ae.cpp"
+)
+set(RISOPRINT_CORE_SOURCES
+    "${RISOPRINT_CORE_DIR}/risoprint_core.cpp"
+)
+foreach(src IN LISTS RISOPRINT_AE_SOURCES RISOPRINT_CORE_SOURCES)
+    if(NOT EXISTS "${src}")
+        message(FATAL_ERROR "Required ResoPrint source missing: ${src}")
+    endif()
+endforeach()
 
 # IMPORTANT: risoprint is the actual CMake library target, just as
 # YMDithers is in the reference. Do not create another custom target named
