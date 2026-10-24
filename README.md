@@ -58,6 +58,6 @@ This update lowers the plate thresholds so midtones and source details can recei
 
 
 ## Color and registration correction
-- Added an opt-in `Black & White` checkbox; it is OFF by default, so the default output remains color.
+- Removed the experimental `Black & White` parameter to preserve the original parameter IDs and avoid remapping saved effect settings.
 - Reset plate registration shifts to zero by default and constrained each axis to ±0.003 of frame dimensions to prevent extreme displacement/cropping.
 - Existing ink colors remain the default cyan, ochre, and blue plates.

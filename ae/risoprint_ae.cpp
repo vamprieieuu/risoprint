@@ -17,7 +17,7 @@
 #define BUILD_VERSION 1
 
 enum {
-    ID_INTENSITY=1, ID_BLEND, ID_SHOW_SOURCE, ID_BLACK_WHITE, ID_PAPER, ID_INK_CONTRAST,
+    ID_INTENSITY=1, ID_BLEND, ID_SHOW_SOURCE, ID_PAPER, ID_INK_CONTRAST,
     ID_SCALE, ID_OPACITY, ID_SOFTNESS, ID_CONTRAST,
     ID_ENABLED_1, ID_INK_1, ID_SEP_1, ID_SHIFT_X_1, ID_SHIFT_Y_1,
     ID_ENABLED_2, ID_INK_2, ID_SEP_2, ID_SHIFT_X_2, ID_SHIFT_Y_2,
@@ -48,14 +48,13 @@ static PF_Err ParamsSetup(PF_InData* in_data,PF_OutData* out_data,PF_ParamDef* p
     ADD(slider("Intensity (%)",0,100,0,100,100,1,ID_INTENSITY));
     ADD(popup("Blend",11,1,BLEND_CHOICES,ID_BLEND));
     ADD(check("Show source",false,ID_SHOW_SOURCE));
-    ADD(check("Black & White",false,ID_BLACK_WHITE));
     ADD(color("Paper",255,255,255,ID_PAPER));
     ADD(slider("Ink contrast",-1,1,-1,1,-0.33,2,ID_INK_CONTRAST));
     ADD(slider("Scale",0.03,1,0.03,1,0.21,2,ID_SCALE));
     ADD(slider("Opacity",0,1,0,1,0.65,2,ID_OPACITY));
     ADD(slider("Softness",0,1,0,1,0.50,2,ID_SOFTNESS));
     ADD(slider("Contrast",0.25,3,0.25,3,1.18,2,ID_CONTRAST));
-    ADD(slider("Blend With Original (%)",0,100,0,100,12,1,ID_BLEND_ORIGINAL));
+    ADD(slider("Blend With Original (%)",0,100,0,100,0,1,ID_BLEND_ORIGINAL));
 
     ADD(check("Enabled 1",true,ID_ENABLED_1));
     ADD(color("Ink 1",80,217,241,ID_INK_1));
@@ -103,10 +102,9 @@ static PF_Err SmartRender(PF_InData* in_data,PF_OutData*,PF_SmartRenderExtra* ex
         p.intensity=getSlider(in_data,ID_INTENSITY,100)/100.0;
         p.blend=getPopup(in_data,ID_BLEND,1);
         p.showSource=getCheck(in_data,ID_SHOW_SOURCE,false);
-        p.blackWhite=getCheck(in_data,ID_BLACK_WHITE,false);
         p.paper=getColor(in_data,ID_PAPER,{1,1,1});
         p.inkContrast=getSlider(in_data,ID_INK_CONTRAST,-0.33);
-        p.scale=getSlider(in_data,ID_SCALE,0.21); p.opacity=getSlider(in_data,ID_OPACITY,0.65); p.softness=getSlider(in_data,ID_SOFTNESS,0.50); p.contrast=getSlider(in_data,ID_CONTRAST,1.18); p.blendOriginal=getSlider(in_data,ID_BLEND_ORIGINAL,12)/100.0;
+        p.scale=getSlider(in_data,ID_SCALE,0.21); p.opacity=getSlider(in_data,ID_OPACITY,0.65); p.softness=getSlider(in_data,ID_SOFTNESS,0.50); p.contrast=getSlider(in_data,ID_CONTRAST,1.18); p.blendOriginal=getSlider(in_data,ID_BLEND_ORIGINAL,0)/100.0;
         p.ink[0].enabled=getCheck(in_data,ID_ENABLED_1,true); p.ink[0].color=getColor(in_data,ID_INK_1,{80.f/255,217.f/255,241.f/255}); p.ink[0].separation=getSlider(in_data,ID_SEP_1,.38); p.ink[0].shiftX=getSlider(in_data,ID_SHIFT_X_1,0); p.ink[0].shiftY=getSlider(in_data,ID_SHIFT_Y_1,0);
         p.ink[1].enabled=getCheck(in_data,ID_ENABLED_2,true); p.ink[1].color=getColor(in_data,ID_INK_2,{191.f/255,119.f/255,0}); p.ink[1].separation=getSlider(in_data,ID_SEP_2,.64); p.ink[1].shiftX=getSlider(in_data,ID_SHIFT_X_2,0); p.ink[1].shiftY=getSlider(in_data,ID_SHIFT_Y_2,0);
         p.ink[2].enabled=getCheck(in_data,ID_ENABLED_3,true); p.ink[2].color=getColor(in_data,ID_INK_3,{41.f/255,0,1}); p.ink[2].separation=getSlider(in_data,ID_SEP_3,.39); p.ink[2].shiftX=getSlider(in_data,ID_SHIFT_X_3,0); p.ink[2].shiftY=getSlider(in_data,ID_SHIFT_Y_3,0);
