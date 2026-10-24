@@ -55,3 +55,9 @@ Target After Effects: Windows x64, including the user's AE 2023 / 23.x environme
 
 \n## White-output / weak-plate correction\n
 This update lowers the plate thresholds so midtones and source details can receive ink instead of falling through to the white paper color. Ink opacity no longer suppresses plate coverage as aggressively. The default Blend With Original is 12% to preserve some source micro-detail while allowing the print colors to remain visible.\n
+
+
+## Color and registration correction
+- Added an opt-in `Black & White` checkbox; it is OFF by default, so the default output remains color.
+- Reset plate registration shifts to zero by default and constrained each axis to ±0.003 of frame dimensions to prevent extreme displacement/cropping.
+- Existing ink colors remain the default cyan, ochre, and blue plates.

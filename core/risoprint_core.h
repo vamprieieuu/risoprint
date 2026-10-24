@@ -23,6 +23,7 @@ struct Params {
     double intensity=100.0;
     int blend=1; // 1=Normal
     bool showSource=false;
+    bool blackWhite=false;
     Color paper{1.f,1.f,1.f};
     double inkContrast=-0.33;
     double scale=0.21;

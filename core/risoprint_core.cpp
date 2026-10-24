@@ -155,6 +155,10 @@ void render(const Image& src,const Image& dst,const Params& p,const FrameCtx& ct
             out[0]=clampf(accum.r*(1.f-keep)+sr*keep);
             out[1]=clampf(accum.g*(1.f-keep)+sg*keep);
             out[2]=clampf(accum.b*(1.f-keep)+sb*keep);
+            if(p.blackWhite){
+                const float gray=luma(out[0],out[1],out[2]);
+                out[0]=out[1]=out[2]=gray;
+            }
             out[3]=srcA;
         }
     }
