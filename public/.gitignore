@@ -1,0 +1,8 @@
+build/
+dist/
+public/dist/
+*.obj
+*.pdb
+*.ilk
+*.user
+.vs/

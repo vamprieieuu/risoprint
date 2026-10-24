@@ -1,63 +1,71 @@
-# risoprint — native After Effects Risograph Effect
+# risoprint — Native After Effects Risograph Effect Engine
 
-risoprint is a native Windows x64 `.aex` effect for Adobe After Effects. Its build/registration skeleton is based on the known-good `Dithering_MAJEED_build_ready` repository structure, while the render engine is new and dedicated to the three-plate risograph look.
+`risoprint` is a native Windows x64 `.aex` effect for Adobe After Effects (2023 / 23.x+). It simulates the distinctive look of physical 3-drum risograph and multi-ink screenprinting with real color-aware plate separation, stochastic stipple grain, and controlled micro-registration drift.
 
-## Engine
+---
 
-The effect is modeled as three overlapping ink plates printed onto paper:
+## Technical Audit & Fixes (2026-10-24)
 
-- color-aware plate separation
-- per-plate Separation amount
-- per-plate Shift X / Shift Y registration drift
-- paper color
-- ink contrast
-- grain Scale
-- paper/ink Opacity texture response
-- source Softness
-- global Contrast
-- Intensity
-- three editable inks
-- deterministic animated print grain
+### 1. Root Cause Resolution for User-Reported Symptoms
+A previous commit inserted `Blend With Original (%)` at index 10 in `ParamsSetup` while leaving `ID_BLEND_ORIGINAL` at the end of the parameter enum (`ID_BLEND_ORIGINAL = 25`). Because After Effects' `PF_CHECKOUT_PARAM` queries by sequential index, every parameter from index 10 onward was displaced by one:
+- **Black-and-White Output**: `ID_INK_1` queried index 11 (`Enabled 1` checkbox). Color unions read boolean zeros/garbage, killing plate color. **(Fixed)**
+- **Left Canvas Shift**: `ID_SHIFT_X_1` queried index 13 (`Separation 1` slider = 0.38), displacing the cyan plate by 38% of the frame width. Plate 2 queried `Separation 2` (0.64), pushing the subject completely off-canvas. **(Fixed)**
+- **Source Ghosting**: `Blend With Original` was previously set to 12% to mask broken thresholds, superimposing an unshifted source copy over the displaced plates. **(Fixed: set to 0.0% default with conditional bypass)**
+- **Stable Parameter Table**: Parameters 1 through 25 are now in strict 1:1 agreement between `enum` and `ParamsSetup`.
 
-The defaults match the supplied reference settings screenshots:
+---
 
-- Paper: `#FFFFFF`
-- Ink contrast: `-0.33`
-- Scale: `0.21`
-- Opacity: `0.65`
-- Softness: `0.50`
-- Contrast: `1.58`
-- Ink 1: `#50D9F1`, Separation `0.38`, Shift X `0.003`, Shift Y `0.002`
-- Ink 2: `#BF7700`, Separation `0.64`, Shift X `0.000`, Shift Y `-0.001`
-- Ink 3: `#2900FF`, Separation `0.39`, Shift X `0.000`, Shift Y `-0.003`
+## Parameter Table
 
-## Build
+| Index | Name | Type | Range / Choices | Default | Notes |
+|---|---|---|---|---|---|
+| 1 | Intensity | Float Slider | 0.0 .. 100.0% | 100.0% | Master ink strength |
+| 2 | Blend | Popup | 11 blend modes | Normal (1) | Physical subtractive ink laydown |
+| 3 | Show source | Checkbox | true / false | false | Raw source layer passthrough |
+| 4 | Paper | Color | RGB [0..255] | #FFFFFF | Paper stock color |
+| 5 | Ink contrast | Float Slider | -1.00 .. 1.00 | -0.33 | Halftone midpoint curve |
+| 6 | Scale | Float Slider | 0.03 .. 1.00 | 0.21 | Stochastic grain screen size |
+| 7 | Opacity | Float Slider | 0.00 .. 1.00 | 0.65 | Paper break-through response |
+| 8 | Softness | Float Slider | 0.00 .. 1.00 | 0.50 | Optical spread filter |
+| 9 | Contrast | Float Slider | 0.25 .. 3.00 | 1.58 | Separation steepness curve |
+| 10 | Enabled 1 | Checkbox | true / false | true | Cyan plate toggle |
+| 11 | Ink 1 | Color | RGB [0..255] | #50D9F1 | Cyan / Aqua plate |
+| 12 | Separation 1 | Float Slider | 0.00 .. 1.00 | 0.38 | Plate thresholding window |
+| 13 | Shift X 1 | Float Slider | -0.05 .. 0.05 | 0.003 | Micro registration chatter X |
+| 14 | Shift Y 1 | Float Slider | -0.05 .. 0.05 | 0.002 | Micro registration chatter Y |
+| 15 | Enabled 2 | Checkbox | true / false | true | Ochre plate toggle |
+| 16 | Ink 2 | Color | RGB [0..255] | #BF7700 | Warm Ochre / Orange plate |
+| 17 | Separation 2 | Float Slider | 0.00 .. 1.00 | 0.64 | Captures dark burgundy reds |
+| 18 | Shift X 2 | Float Slider | -0.05 .. 0.05 | 0.000 | Micro registration chatter X |
+| 19 | Shift Y 2 | Float Slider | -0.05 .. 0.05 | -0.001 | Micro registration chatter Y |
+| 20 | Enabled 3 | Checkbox | true / false | true | Blue plate toggle |
+| 21 | Ink 3 | Color | RGB [0..255] | #2900FF | Blue / Violet plate |
+| 22 | Separation 3 | Float Slider | 0.00 .. 1.00 | 0.39 | Plate thresholding window |
+| 23 | Shift X 3 | Float Slider | -0.05 .. 0.05 | 0.000 | Micro registration chatter X |
+| 24 | Shift Y 3 | Float Slider | -0.05 .. 0.05 | -0.003 | Micro registration chatter Y |
+| 25 | Blend With Original | Float Slider | 0.0 .. 100.0% | 0.0% | Default 0% (zero ghosting) |
 
-GitHub Actions uses Windows 2022 + MSVC x64 + CMake, matching the proven reference approach. The final artifact is `risoprint.aex`.
+---
 
-Target After Effects: Windows x64, including the user's AE 2023 / 23.x environment.
+## Build System & Verification
 
+### Windows x64 MSVC (GitHub Actions)
+Build is handled by `.github/workflows/build.yml` running on `windows-2022`:
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release --target risoprint --parallel
+python ae/verify_build.py dist/risoprint.aex
+```
 
-## Current build/runtime fixes
-- Plugin display/match name: `risoprint`
-- PiPL `AE_Effect_Version` uses the Adobe `PF_VERSION` encoding required by the reference build (`01 06 08 00` for code version 1.0.0 RELEASE build 1).
-- CMake has one real plugin target (`risoprint`) and no same-name custom target, preventing MSBuild circular dependencies.
-- Exposed controls: Intensity, Blend, Show Source, Paper, Ink Contrast, Scale, Opacity, Softness, Contrast, and 3 complete ink plates.
-- Each ink plate exposes Enabled, Ink Color, Separation, Shift X, Shift Y.
-- The engine reads every exposed control during Smart Render.
+### Verification Suite
+Run the automated parameter alignment and safety audit:
+```bash
+python3 tests/verify_plugin_code.py
+```
 
-
-## Rendering fix (2026-10-24)
-- Fixed intensity being divided by 100 twice, which made a 100% setting render at roughly 1% strength and appear nearly white.
-- Blend popup now exposes Normal, Darken, Multiply, Color Burn, Lighten, Screen, Plus Lighter, Color Dodge, Overlay, Soft Light, and Hard Light, and reads the popup parameter using the correct parameter union.
-- Opacity now controls actual ink coverage rather than only changing grain behavior.
-- These changes are source-level fixes; validate the new build in After Effects before treating it as fully tested.
-
-\n## White-output / weak-plate correction\n
-This update lowers the plate thresholds so midtones and source details can receive ink instead of falling through to the white paper color. Ink opacity no longer suppresses plate coverage as aggressively. The default Blend With Original is 12% to preserve some source micro-detail while allowing the print colors to remain visible.\n
-
-
-## Color and registration correction
-- Removed the experimental `Black & White` parameter to preserve the original parameter IDs and avoid remapping saved effect settings.
-- Reset plate registration shifts to zero by default and constrained each axis to ±0.003 of frame dimensions to prevent extreme displacement/cropping.
-- Existing ink colors remain the default cyan, ochre, and blue plates.
+### Interactive Web Test Harness
+Run the live simulator on port 3000:
+```bash
+npm run dev
+```
+Provides split-screen wipe comparison with `IMG_4003.jpeg` and `IMG_4010.jpeg`, stencil plate isolations, bug simulation, and one-click ZIP packaging.
