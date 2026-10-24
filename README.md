@@ -45,3 +45,10 @@ Target After Effects: Windows x64, including the user's AE 2023 / 23.x environme
 - Exposed controls: Intensity, Blend, Show Source, Paper, Ink Contrast, Scale, Opacity, Softness, Contrast, and 3 complete ink plates.
 - Each ink plate exposes Enabled, Ink Color, Separation, Shift X, Shift Y.
 - The engine reads every exposed control during Smart Render.
+
+
+## Rendering fix (2026-10-24)
+- Fixed intensity being divided by 100 twice, which made a 100% setting render at roughly 1% strength and appear nearly white.
+- Blend popup now exposes Normal, Darken, Multiply, Color Burn, Lighten, Screen, Plus Lighter, Color Dodge, Overlay, Soft Light, and Hard Light, and reads the popup parameter using the correct parameter union.
+- Opacity now controls actual ink coverage rather than only changing grain behavior.
+- These changes are source-level fixes; validate the new build in After Effects before treating it as fully tested.

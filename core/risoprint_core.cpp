@@ -92,7 +92,7 @@ static inline float plateDensity(const Color& s,const Color& ink,double sep,doub
 void render(const Image& src,const Image& dst,const Params& p,const FrameCtx& ctx){
     const int W=src.w,H=src.h;
     if(W<=0||H<=0) return;
-    const float intensity=clampf((float)(p.intensity/100.0));
+    const float intensity=clampf((float)p.intensity);
     const float softRadius=(float)(p.softness*2.4);
     const float grainScale=(float)std::max(0.03,p.scale);
     const float grainVisibility=clampf((float)p.opacity);
@@ -121,10 +121,27 @@ void render(const Image& src,const Image& dst,const Params& p,const FrameCtx& ct
                 // Let the paper break through the ink according to opacity.
                 coverage *= (1.f - grainVisibility*0.34f*baseGrain);
                 // Normal subtractive plate: ink replaces paper in covered areas.
-                float a=clampf(coverage*intensity);
-                accum.r=accum.r*(1.f-a)+ip.color.r*a;
-                accum.g=accum.g*(1.f-a)+ip.color.g*a;
-                accum.b=accum.b*(1.f-a)+ip.color.b*a;
+                float a=clampf(coverage*intensity*grainVisibility);
+                auto blendChannel=[&](float base,float ink)->float {
+                    float mixed=ink;
+                    switch(p.blend){
+                        case 2: mixed=std::min(base,ink); break; // Darken
+                        case 3: mixed=base*ink; break; // Multiply
+                        case 4: mixed=(ink<=0.0001f)?0.f:1.f-std::min(1.f,(1.f-base)/ink); break; // Color Burn
+                        case 5: mixed=std::max(base,ink); break; // Lighten
+                        case 6: mixed=1.f-(1.f-base)*(1.f-ink); break; // Screen
+                        case 7: mixed=std::min(1.f,base+ink); break; // Plus Lighter
+                        case 8: mixed=(ink>=0.9999f)?1.f:std::min(1.f,base/(1.f-ink)); break; // Color Dodge
+                        case 9: mixed=(base<0.5f)?(2.f*base*ink):(1.f-2.f*(1.f-base)*(1.f-ink)); break; // Overlay
+                        case 10: mixed=(1.f-2.f*ink)*base*base+2.f*ink*base; break; // Soft Light approximation
+                        case 11: mixed=(ink<0.5f)?(2.f*base*ink):(1.f-2.f*(1.f-base)*(1.f-ink)); break; // Hard Light
+                        default: mixed=ink; break; // Normal
+                    }
+                    return clampf(base*(1.f-a)+mixed*a);
+                };
+                accum.r=blendChannel(accum.r,ip.color.r);
+                accum.g=blendChannel(accum.g,ip.color.g);
+                accum.b=blendChannel(accum.b,ip.color.b);
             }
             float srcA=src.at(x,y)[3];
             out[0]=clampf(accum.r); out[1]=clampf(accum.g); out[2]=clampf(accum.b); out[3]=srcA;

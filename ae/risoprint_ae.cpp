@@ -25,7 +25,7 @@ enum {
     NUM_PARAMS=ID_SHIFT_Y_3
 };
 
-static const char* BLEND_CHOICES="Normal";
+static const char* BLEND_CHOICES="Normal|Darken|Multiply|Color Burn|Lighten|Screen|Plus Lighter|Color Dodge|Overlay|Soft Light|Hard Light";
 
 static PF_Err ParamsSetup(PF_InData* in_data,PF_OutData* out_data,PF_ParamDef* params[],PF_LayerDef* output){
     PF_Err err=PF_Err_NONE; PF_ParamDef def;
@@ -45,7 +45,7 @@ static PF_Err ParamsSetup(PF_InData* in_data,PF_OutData* out_data,PF_ParamDef* p
     };
 #define ADD(x) do{err=(x);if(err!=PF_Err_NONE)return err;}while(0)
     ADD(slider("Intensity (%)",0,100,0,100,100,1,ID_INTENSITY));
-    ADD(popup("Blend",1,1,BLEND_CHOICES,ID_BLEND));
+    ADD(popup("Blend",11,1,BLEND_CHOICES,ID_BLEND));
     ADD(check("Show source",false,ID_SHOW_SOURCE));
     ADD(color("Paper",255,255,255,ID_PAPER));
     ADD(slider("Ink contrast",-1,1,-1,1,-0.33,2,ID_INK_CONTRAST));
@@ -83,6 +83,7 @@ static PF_Err SmartPreRender(PF_InData* in_data,PF_OutData*,PF_PreRenderExtra* e
     extra->output->result_rect=result.result_rect; extra->output->max_result_rect=result.max_result_rect; return err;
 }
 
+static int getPopup(PF_InData* in_data,int id,int d){PF_ParamDef p;AEFX_CLR_STRUCT(p);if(PF_CHECKOUT_PARAM(in_data,id,in_data->current_time,in_data->time_step,in_data->time_scale,&p)==PF_Err_NONE){int v=p.u.pd.value;PF_CHECKIN_PARAM(in_data,&p);return v;}return d;}
 static double getSlider(PF_InData* in_data,int id,double d){PF_ParamDef p;AEFX_CLR_STRUCT(p);if(PF_CHECKOUT_PARAM(in_data,id,in_data->current_time,in_data->time_step,in_data->time_scale,&p)==PF_Err_NONE){double v=p.u.fs_d.value;PF_CHECKIN_PARAM(in_data,&p);return v;}return d;}
 static bool getCheck(PF_InData* in_data,int id,bool d){PF_ParamDef p;AEFX_CLR_STRUCT(p);if(PF_CHECKOUT_PARAM(in_data,id,in_data->current_time,in_data->time_step,in_data->time_scale,&p)==PF_Err_NONE){bool v=p.u.bd.value!=0;PF_CHECKIN_PARAM(in_data,&p);return v;}return d;}
 static resoprint::Color getColor(PF_InData* in_data,int id,resoprint::Color d){PF_ParamDef p;AEFX_CLR_STRUCT(p);if(PF_CHECKOUT_PARAM(in_data,id,in_data->current_time,in_data->time_step,in_data->time_scale,&p)==PF_Err_NONE){d.r=p.u.cd.value.red/255.f;d.g=p.u.cd.value.green/255.f;d.b=p.u.cd.value.blue/255.f;PF_CHECKIN_PARAM(in_data,&p);}return d;}
@@ -97,7 +98,7 @@ static PF_Err SmartRender(PF_InData* in_data,PF_OutData*,PF_SmartRenderExtra* ex
     try{
         resoprint::Params p;
         p.intensity=getSlider(in_data,ID_INTENSITY,100)/100.0;
-        p.blend=(int)getSlider(in_data,ID_BLEND,1);
+        p.blend=getPopup(in_data,ID_BLEND,1);
         p.showSource=getCheck(in_data,ID_SHOW_SOURCE,false);
         p.paper=getColor(in_data,ID_PAPER,{1,1,1});
         p.inkContrast=getSlider(in_data,ID_INK_CONTRAST,-0.33);
