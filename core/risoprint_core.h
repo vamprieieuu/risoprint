@@ -28,7 +28,8 @@ struct Params {
     double scale=0.21;
     double opacity=0.65;
     double softness=0.50;
-    double contrast=1.58;
+    double contrast=1.18;
+    double blendOriginal=0.22;
     InkParams ink[3];
 };
 

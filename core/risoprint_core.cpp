@@ -117,11 +117,11 @@ void render(const Image& src,const Image& dst,const Params& p,const FrameCtx& ct
                 // Soft stochastic screen: more grain at the plate boundary and in highlights.
                 float grainTerm=(baseGrain-0.5f)*0.52f + (n-0.5f)*0.18f;
                 float thresholded=clampf(d + grainTerm*(0.42f + 0.58f*grainVisibility));
-                float coverage=smoothstep(0.16f,0.84f,thresholded);
+                float coverage=smoothstep(0.08f,0.96f,thresholded);
                 // Let the paper break through the ink according to opacity.
                 coverage *= (1.f - grainVisibility*0.34f*baseGrain);
                 // Normal subtractive plate: ink replaces paper in covered areas.
-                float a=clampf(coverage*intensity*grainVisibility);
+                float a=clampf(coverage*intensity*grainVisibility*0.78f);
                 auto blendChannel=[&](float base,float ink)->float {
                     float mixed=ink;
                     switch(p.blend){
@@ -144,7 +144,13 @@ void render(const Image& src,const Image& dst,const Params& p,const FrameCtx& ct
                 accum.b=blendChannel(accum.b,ip.color.b);
             }
             float srcA=src.at(x,y)[3];
-            out[0]=clampf(accum.r); out[1]=clampf(accum.g); out[2]=clampf(accum.b); out[3]=srcA;
+            // Retain source micro-detail by gently mixing the print result back over the original.
+            const float keep=clampf((float)p.blendOriginal);
+            const float sr=src.at(x,y)[0], sg=src.at(x,y)[1], sb=src.at(x,y)[2];
+            out[0]=clampf(accum.r*(1.f-keep)+sr*keep);
+            out[1]=clampf(accum.g*(1.f-keep)+sg*keep);
+            out[2]=clampf(accum.b*(1.f-keep)+sb*keep);
+            out[3]=srcA;
         }
     }
 }
