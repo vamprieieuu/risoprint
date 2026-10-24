@@ -52,3 +52,6 @@ Target After Effects: Windows x64, including the user's AE 2023 / 23.x environme
 - Blend popup now exposes Normal, Darken, Multiply, Color Burn, Lighten, Screen, Plus Lighter, Color Dodge, Overlay, Soft Light, and Hard Light, and reads the popup parameter using the correct parameter union.
 - Opacity now controls actual ink coverage rather than only changing grain behavior.
 - These changes are source-level fixes; validate the new build in After Effects before treating it as fully tested.
+
+\n## White-output / weak-plate correction\n
+This update lowers the plate thresholds so midtones and source details can receive ink instead of falling through to the white paper color. Ink opacity no longer suppresses plate coverage as aggressively. The default Blend With Original is 12% to preserve some source micro-detail while allowing the print colors to remain visible.\n

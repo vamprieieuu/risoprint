@@ -79,8 +79,10 @@ static inline float plateDensity(const Color& s,const Color& ink,double sep,doub
     // Higher Separation means the plate prints more readily. These thresholds keep
     // all three plates alive on dark/neutral regions while preserving hue selectivity.
     float sepv=(float)std::max(0.0,std::min(1.0,sep));
-    float lo=0.72f-sepv*0.42f;
-    float hi=0.98f-sepv*0.32f;
+    // Keep the plate threshold in a usable midtone range. The previous high
+    // thresholds made nearly every pixel fall through to white paper.
+    float lo=0.42f-sepv*0.28f;
+    float hi=0.88f-sepv*0.22f;
     d=smoothstep(lo,hi,d);
 
     // Ink contrast is a small final shaping control around the midpoint.
@@ -117,11 +119,14 @@ void render(const Image& src,const Image& dst,const Params& p,const FrameCtx& ct
                 // Soft stochastic screen: more grain at the plate boundary and in highlights.
                 float grainTerm=(baseGrain-0.5f)*0.52f + (n-0.5f)*0.18f;
                 float thresholded=clampf(d + grainTerm*(0.42f + 0.58f*grainVisibility));
-                float coverage=smoothstep(0.08f,0.96f,thresholded);
+                // Do not require almost-black pixels before an ink plate appears.
+                // This retains horse/fur detail and avoids an almost-white output.
+                float coverage=smoothstep(0.015f,0.78f,thresholded);
                 // Let the paper break through the ink according to opacity.
                 coverage *= (1.f - grainVisibility*0.34f*baseGrain);
                 // Normal subtractive plate: ink replaces paper in covered areas.
-                float a=clampf(coverage*intensity*grainVisibility*0.78f);
+                // Opacity controls ink strength, but never cancels the plate entirely.
+                float a=clampf(coverage*intensity*(0.45f+0.55f*grainVisibility)*0.92f);
                 auto blendChannel=[&](float base,float ink)->float {
                     float mixed=ink;
                     switch(p.blend){
