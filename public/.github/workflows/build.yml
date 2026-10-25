@@ -1,0 +1,129 @@
+name: Build risoprint (MSVC x64)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pefile
+
+      - name: Clean previous build artifacts
+        shell: pwsh
+        run: |
+          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+          if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+          if (Test-Path "public/dist") { Remove-Item -Recurse -Force "public/dist" }
+          New-Item -ItemType Directory -Force -Path "dist" | Out-Null
+          New-Item -ItemType Directory -Force -Path "public/dist" | Out-Null
+          Write-Host "Pristine clean build environment initialized."
+
+      - name: Configure CMake (Visual Studio 2022 x64 MSVC)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build risoprint Target (Release MSVC)
+        run: cmake --build build --config Release --target risoprint --parallel
+
+      - name: Locate and Verify risoprint.aex
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "build/bin/Release/risoprint.aex",
+            "build/bin/risoprint.aex",
+            "build/Release/risoprint.aex",
+            "build/risoprint.aex",
+            "dist/risoprint.aex"
+          )
+          $aexPath = $null
+          foreach ($cand in $candidates) {
+            if (Test-Path $cand) {
+              $aexPath = (Get-Item $cand).FullName
+              break
+            }
+          }
+          if (-not $aexPath) {
+            $found = Get-ChildItem -Path build -Filter '*.aex' -Recurse -File | Select-Object -First 1
+            if ($found) { $aexPath = $found.FullName }
+          }
+          if (-not $aexPath) {
+            Write-Error "risoprint.aex was not produced by the build."
+            exit 1
+          }
+
+          function Safe-Copy($src, $dst) {
+            $srcFull = (Get-Item $src).FullName
+            if (Test-Path $dst) {
+              $dstFull = (Get-Item $dst).FullName
+              if ($srcFull.ToLowerInvariant() -eq $dstFull.ToLowerInvariant()) {
+                Write-Host "Destination $dst is identical to source; skipping copy."
+                return
+              }
+            } else {
+              $parent = Split-Path -Path $dst -Parent
+              if ($parent -and -not (Test-Path $parent)) {
+                New-Item -ItemType Directory -Force -Path $parent | Out-Null
+              }
+            }
+            Copy-Item -Path $srcFull -Destination $dst -Force
+            Write-Host "Copied $srcFull -> $dst"
+          }
+
+          Safe-Copy $aexPath "dist/risoprint.aex"
+          Safe-Copy $aexPath "public/dist/risoprint.aex"
+          Safe-Copy $aexPath "public/risoprint.aex"
+          Safe-Copy $aexPath "risoprint.aex"
+
+          $finalAex = Get-Item "dist/risoprint.aex"
+          Write-Host "=========================================="
+          Write-Host "BUILT AEX ARTIFACT FOR VERIFICATION:"
+          Write-Host "Path: $($finalAex.FullName)"
+          Write-Host "Size: $($finalAex.Length) bytes"
+          $hash = (Get-FileHash -Path $finalAex.FullName -Algorithm SHA256).Hash
+          Write-Host "SHA-256: $hash"
+          Write-Host "=========================================="
+
+          if ($env:GITHUB_STEP_SUMMARY) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '### risoprint Build Success'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Artifact Name: risoprint'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Plugin File: risoprint.aex'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ("- File Size: {0} bytes" -f $finalAex.Length)
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ("- SHA-256: {0}" -f $hash)
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Subsystem: Windows GUI 6.0 (MSVC x64)'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Runtime: Standalone Static MultiThreaded (/MT)'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '- Exports: EffectMain, PluginDataEntryFunction2'
+          }
+
+          $env:PYTHONIOENCODING = "utf-8"
+          python ae/verify_build.py $finalAex.FullName
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Verification failed for built risoprint.aex"
+            exit 1
+          }
+
+          dumpbin /headers /exports /dependents $finalAex.FullName
+
+      - name: Upload risoprint Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: risoprint-AEX
+          path: dist/risoprint.aex
+          if-no-files-found: error
