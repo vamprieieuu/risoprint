@@ -470,21 +470,23 @@ Vec4 RisoSpotBalancedDecompose(Vec3 target, Vec3 a0, Vec3 a1, Vec3 a2, Vec3 a3, 
 void ApplyPressPreset(int presetIdx, PluginParams& p) {
     if (presetIdx <= 1) return; // Custom
     switch (presetIdx) {
+        // Presets are intentionally restrained: keep the source image readable
+        // and let the user dial the print character up from a blended baseline.
         case 2: // Soft Studio
-            p.screenType = 1; p.screenDensity = 220.0f; p.softness = 30.0f;
-            p.paperGrain = 15.0f; p.dotGain = 1.05f; p.overprintMode = 2;
+            p.screenType = 1; p.screenDensity = 220.0f; p.softness = 22.0f;
+            p.paperGrain = 12.0f; p.dotGain = 1.03f; p.overprintMode = 2;
             break;
         case 3: // 1970s Zine
-            p.screenType = 2; p.screenDensity = 160.0f; p.distortion = 25.0f;
-            p.paperType = 4; p.paperGrain = 35.0f; p.inkFlecks = 20.0f;
+            p.screenType = 2; p.screenDensity = 160.0f; p.distortion = 12.0f;
+            p.paperType = 4; p.paperGrain = 22.0f; p.inkFlecks = 10.0f;
             break;
         case 4: // Blown-out Punk
-            p.screenType = 1; p.screenDensity = 140.0f; p.dotHardness = 180.0f;
-            p.contrast = 35.0f; p.brightness = 10.0f; p.lineArtStrength = 80.0f;
+            p.screenType = 1; p.screenDensity = 155.0f; p.dotHardness = 145.0f;
+            p.contrast = 18.0f; p.brightness = 4.0f; p.lineArtStrength = 65.0f;
             break;
         case 5: // Newsprint
-            p.screenType = 4; p.screenDensity = 130.0f; p.paperType = 2;
-            p.dotGain = 1.25f; p.agingAmount = 30.0f;
+            p.screenType = 4; p.screenDensity = 145.0f; p.paperType = 2;
+            p.dotGain = 1.12f; p.agingAmount = 15.0f;
             break;
         case 6: // RisoFest 2-color
             p.colorMode = 2; p.activePlates = 2; p.spotSeparation = 2;
@@ -492,11 +494,11 @@ void ApplyPressPreset(int presetIdx, PluginParams& p) {
             break;
         case 7: // Letterpress Indigo
             p.colorMode = 2; p.activePlates = 2; p.screenType = 5;
-            p.paperGrain = 28.0f; p.inkPooling = 15.0f;
+            p.paperGrain = 20.0f; p.inkPooling = 8.0f;
             break;
         case 8: // Bright Comic
             p.screenType = 1; p.dotShape = 1; p.screenDensity = 200.0f;
-            p.saturation = 20.0f; p.blackBoost = 130.0f;
+            p.saturation = 10.0f; p.blackBoost = 115.0f;
             break;
         default:
             p.screenDensity = 200.0f;
@@ -519,6 +521,16 @@ void ApplyMachineProfile(int profileIdx, PluginParams& p) {
             p.screenDensity = 190.0f; p.dotStretch = 15.0f; break;
         case 7: // CR1610 (Compact 300 DPI)
             p.screenDensity = 150.0f; p.inkVariance = 25.0f; break;
+        case 8: // GR3770 (Legacy, 600 DPI)
+            p.screenDensity = 225.0f; p.inkVariance = 18.0f; p.dotGain = 1.08f; break;
+        case 9: // RP3700 (A3, 600 DPI)
+            p.screenDensity = 235.0f; p.inkVariance = 10.0f; p.sheetWarp = 5.0f; break;
+        case 10: // CV3230 (Value, 300x600 DPI)
+            p.screenDensity = 175.0f; p.inkVariance = 22.0f; p.dotStretch = 8.0f; break;
+        case 11: // SF9450 (Flagship, 600 DPI)
+            p.screenDensity = 250.0f; p.inkVariance = 6.0f; p.pressFidelity = 18.0f; break;
+        case 12: // MH9450 (Modern, 600 DPI, 2-color)
+            p.screenDensity = 245.0f; p.activePlates = 2; p.inkVariance = 8.0f; break;
         default: break;
     }
 }
@@ -620,6 +632,17 @@ void RenderRisoprint(
     ApplyPressPreset(p.pressPreset, p);
     ApplyMachineProfile(p.machineProfile, p);
     ApplySpotKit(p.spotInkKit, p);
+    // Presets should feel printed into the photograph, not replace it with an
+    // overpowering effect. Preserve any explicit user blend if it is higher.
+    if (p.pressPreset > 1) p.blendOriginal = std::max(p.blendOriginal, 22.0f);
+    // Explicit print-resolution choice takes precedence over machine defaults.
+    switch (p.printResolution) {
+        case 2: p.screenDensity = 125.0f; break;
+        case 3: p.screenDensity = 175.0f; break;
+        case 4: p.screenDensity = 240.0f; break;
+        case 5: p.screenDensity = 300.0f; break;
+        default: break; // Custom: use the selected scale / machine profile.
+    }
 
     const int W = std::min(src.w, dst.w);
     const int H = std::min(src.h, dst.h);
@@ -823,7 +846,9 @@ void RenderRisoprint(
             float specksScale = std::max(1.0f, p.fleckScale);
 
             for (int ch = 0; ch < 4; ++ch) {
-                if (!plateEn[ch]) continue;
+                // Proof modes are independent inspection views: calculate each
+                // separation even if its plate is disabled in the composite.
+                if (!plateEn[ch] && p.plateProof == 1) continue;
 
                 // Specks noise
                 float spk = 0.0f;
@@ -976,21 +1001,46 @@ void RenderRisoprint(
 
             // Paper Texture & Color
             ColorRGB paper = p.paperColor;
+            // Paper type is a real stock profile, not just a grain multiplier.
+            // Subtle stock tints keep the selected paper visible without
+            // overriding the user's chosen paper color.
+            auto tintPaper = [&](ColorRGB tint, float amount) {
+                paper.r = Mix(paper.r, tint.r, amount);
+                paper.g = Mix(paper.g, tint.g, amount);
+                paper.b = Mix(paper.b, tint.b, amount);
+            };
+            if (p.paperType == 2) { // Newsprint: warm gray
+                tintPaper({0.91f, 0.88f, 0.79f}, 0.18f);
+            } else if (p.paperType == 3) { // Cotton rag: neutral soft white
+                tintPaper({0.97f, 0.96f, 0.92f}, 0.12f);
+            } else if (p.paperType == 4) { // Kraft
+                tintPaper({0.72f, 0.56f, 0.37f}, 0.24f);
+            } else if (p.paperType == 5) { // Papyrus
+                tintPaper({0.91f, 0.84f, 0.66f}, 0.22f);
+            } else if (p.paperType == 6) { // Smooth coated
+                tintPaper({0.99f, 0.99f, 0.98f}, 0.20f);
+            }
+
             float paperGrainVal = 0.5f;
-            if (p.paperGrain > 0.01f) {
+            float effectivePaperGrain = p.paperGrain;
+            if (p.paperType > 1 && p.paperType != 6) {
+                effectivePaperGrain = std::max(effectivePaperGrain, p.paperType == 4 ? 22.0f : 12.0f);
+            }
+            if (effectivePaperGrain > 0.01f) {
                 float gScale = std::max(1.0f, p.grainScale);
                 paperGrainVal = RisoFBM({ uv.x * gScale, uv.y * gScale }, 3);
 
-                // Paper Type Specialization
-                if (p.paperType == 2) { // Newsprint
-                    paperGrainVal *= 1.25f;
-                } else if (p.paperType == 4) { // Kraft (Horizontal Banding)
-                    paperGrainVal += 0.35f * std::sin(uv.y * 350.0f);
-                } else if (p.paperType == 5) { // Papyrus
-                    paperGrainVal += 0.25f * RisoNoise2D({ uv.x * 20.0f, uv.y * 200.0f });
+                if (p.paperType == 2) { // Newsprint fibers
+                    paperGrainVal *= 1.18f;
+                } else if (p.paperType == 4) { // Kraft horizontal banding
+                    paperGrainVal += 0.22f * std::sin(uv.y * 350.0f);
+                } else if (p.paperType == 5) { // Papyrus fibers
+                    paperGrainVal += 0.18f * RisoNoise2D({ uv.x * 20.0f, uv.y * 200.0f });
+                } else if (p.paperType == 3) { // Cotton rag fibers
+                    paperGrainVal += 0.08f * RisoNoise2D({ uv.x * 90.0f, uv.y * 90.0f });
                 }
 
-                float structFac = p.paperGrain * 0.01f * (paperGrainVal - 0.5f) * 0.3f;
+                float structFac = effectivePaperGrain * 0.01f * (paperGrainVal - 0.5f) * 0.24f;
                 paper.r = Clamp01(paper.r + structFac);
                 paper.g = Clamp01(paper.g + structFac);
                 paper.b = Clamp01(paper.b + structFac);
@@ -1122,13 +1172,13 @@ void RenderRisoprint(
                 float m = std::max(std::max(chDots[0], chDots[1]), std::max(chDots[2], chDots[3]));
                 finalRgb = { 1.0f - m, 1.0f - m, 1.0f - m };
             } else if (p.plateProof == 3) { // Cyan Separation
-                finalRgb = MixRGB(ColorRGB{1.0f, 1.0f, 1.0f}, activeInks[0], chDots[0]);
+                finalRgb = { Mix(1.0f, activeInks[0].r, chDots[0]), Mix(1.0f, activeInks[0].g, chDots[0]), Mix(1.0f, activeInks[0].b, chDots[0]) };
             } else if (p.plateProof == 4) { // Magenta Separation
-                finalRgb = MixRGB(ColorRGB{1.0f, 1.0f, 1.0f}, activeInks[1], chDots[1]);
+                finalRgb = { Mix(1.0f, activeInks[1].r, chDots[1]), Mix(1.0f, activeInks[1].g, chDots[1]), Mix(1.0f, activeInks[1].b, chDots[1]) };
             } else if (p.plateProof == 5) { // Yellow Separation
-                finalRgb = MixRGB(ColorRGB{1.0f, 1.0f, 1.0f}, activeInks[2], chDots[2]);
+                finalRgb = { Mix(1.0f, activeInks[2].r, chDots[2]), Mix(1.0f, activeInks[2].g, chDots[2]), Mix(1.0f, activeInks[2].b, chDots[2]) };
             } else if (p.plateProof == 6) { // Black Separation
-                finalRgb = MixRGB(ColorRGB{1.0f, 1.0f, 1.0f}, activeInks[3], chDots[3]);
+                finalRgb = { Mix(1.0f, activeInks[3].r, chDots[3]), Mix(1.0f, activeInks[3].g, chDots[3]), Mix(1.0f, activeInks[3].b, chDots[3]) };
             } else if (p.plateProof == 7) { // 4-Up Proof Grid
                 int qx = (uv.x < 0.5f) ? 0 : 1;
                 int qy = (uv.y < 0.5f) ? 0 : 1;
@@ -1138,7 +1188,7 @@ void RenderRisoprint(
                     finalRgb = { 0.2f, 0.2f, 0.2f };
                 } else {
                     int pIdx = (qy == 0) ? (qx == 0 ? 0 : 1) : (qx == 0 ? 2 : 3);
-                    finalRgb = MixRGB(ColorRGB{1.0f, 1.0f, 1.0f}, activeInks[pIdx], chDots[pIdx]);
+                    finalRgb = { Mix(1.0f, activeInks[pIdx].r, chDots[pIdx]), Mix(1.0f, activeInks[pIdx].g, chDots[pIdx]), Mix(1.0f, activeInks[pIdx].b, chDots[pIdx]) };
                 }
             }
 

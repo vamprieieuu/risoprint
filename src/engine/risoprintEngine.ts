@@ -535,6 +535,35 @@ export function renderRisograph(
       }
     : { ...params };
 
+  // Press presets should blend into the photograph instead of overwhelming it.
+  if (p.pressPreset > 1) p.blendOriginal = Math.max(p.blendOriginal, 22);
+
+  // Machine profiles affect the actual screen/print character; explicit DPI
+  // selection is applied last so the user's resolution choice wins.
+  const machineProfiles: Record<number, { density: number; variance?: number; gain?: number; stretch?: number; plates?: number }> = {
+    2: { density: 180, variance: 20, gain: 1.15 },
+    3: { density: 240, variance: 12 },
+    4: { density: 250, stretch: 2 },
+    5: { density: 260 },
+    6: { density: 190, stretch: 15 },
+    7: { density: 150, variance: 25 },
+    8: { density: 225, variance: 18, gain: 1.08 },
+    9: { density: 235, variance: 10 },
+    10: { density: 175, variance: 22, stretch: 8 },
+    11: { density: 250, variance: 6 },
+    12: { density: 245, variance: 8, plates: 2 },
+  };
+  const machine = machineProfiles[p.machineProfile];
+  if (machine) {
+    p.screenDensity = machine.density;
+    if (machine.variance !== undefined) p.inkVariance = machine.variance;
+    if (machine.gain !== undefined) p.dotGain = machine.gain;
+    if (machine.stretch !== undefined) p.dotStretch = machine.stretch;
+    if (machine.plates !== undefined) p.activePlates = machine.plates;
+  }
+  const resolutionDensity: Record<number, number> = { 2: 125, 3: 175, 4: 240, 5: 300 };
+  if (resolutionDensity[p.printResolution] !== undefined) p.screenDensity = resolutionDensity[p.printResolution];
+
   // Spot / CMYK Ink Colors
   const inkC = hexToRgb(p.inkCyan);
   const inkM = hexToRgb(p.inkMagenta);
@@ -661,7 +690,9 @@ export function renderRisograph(
       const bayerStep = Math.max(cellPx / 8.0, 1.0);
 
       for (let ch = 0; ch < 4; ch++) {
-        if (!plateEn[ch]) continue;
+        // Plate proof is an inspection view: calculate every separation even
+        // if its plate is disabled for the final composite.
+        if (!plateEn[ch] && p.plateProof === 1 && mode === 'composite') continue;
 
         const rawVal = clamp(chVals[ch] * plateWeights[ch] * (p.coverage * 0.01));
 
@@ -712,18 +743,36 @@ export function renderRisograph(
         }
       }
 
-      // Paper & Grain
+      // Paper stock has its own tint and surface character, even when the
+      // grain slider is low. The custom paper color remains the base.
       let paperR = paperBase.r;
       let paperG = paperBase.g;
       let paperB = paperBase.b;
+      const stockTints: Record<number, { color: ColorRGB; amount: number }> = {
+        2: { color: { r: 0.91, g: 0.88, b: 0.79 }, amount: 0.18 },
+        3: { color: { r: 0.97, g: 0.96, b: 0.92 }, amount: 0.12 },
+        4: { color: { r: 0.72, g: 0.56, b: 0.37 }, amount: 0.24 },
+        5: { color: { r: 0.91, g: 0.84, b: 0.66 }, amount: 0.22 },
+        6: { color: { r: 0.99, g: 0.99, b: 0.98 }, amount: 0.20 },
+      };
+      const stock = stockTints[p.paperType];
+      if (stock) {
+        paperR = mix(paperR, stock.color.r, stock.amount);
+        paperG = mix(paperG, stock.color.g, stock.amount);
+        paperB = mix(paperB, stock.color.b, stock.amount);
+      }
 
-      if (p.paperGrain > 0.1) {
+      const effectivePaperGrain = p.paperType > 1 && p.paperType !== 6
+        ? Math.max(p.paperGrain, p.paperType === 4 ? 22 : 12)
+        : p.paperGrain;
+      if (effectivePaperGrain > 0.1) {
         const gScale = Math.max(1.0, p.grainScale);
         let gNoise = risoFBM(uvX * gScale, uvY * gScale, 3);
-        if (p.paperType === 4) { // Kraft
-          gNoise += 0.3 * Math.sin(uvY * 300);
-        }
-        const grainFac = p.paperGrain * 0.01 * (gNoise - 0.5) * 0.3;
+        if (p.paperType === 2) gNoise *= 1.18;
+        else if (p.paperType === 3) gNoise += 0.08 * risoNoise2D(uvX * 90, uvY * 90);
+        else if (p.paperType === 4) gNoise += 0.22 * Math.sin(uvY * 350);
+        else if (p.paperType === 5) gNoise += 0.18 * risoNoise2D(uvX * 20, uvY * 200);
+        const grainFac = effectivePaperGrain * 0.01 * (gNoise - 0.5) * 0.24;
         paperR = clamp(paperR + grainFac);
         paperG = clamp(paperG + grainFac);
         paperB = clamp(paperB + grainFac);
