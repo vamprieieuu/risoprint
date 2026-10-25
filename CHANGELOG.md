@@ -1,5 +1,9 @@
 # CHANGELOG — RisoPrint After Effects Plugin & Engine
 
+## [2.0.1] — 2026-10-25: Fix C2679 ColorRGB vs Vec3 Type Mismatch in Proof Modes
+- **Root Cause**: In `core/risoprint_core.cpp` lines 1125, 1127, 1129, 1131, and 1141, plate proof visualization assigned the return value of `Mix3(Vec3, Vec3, float)` to `finalRgb` (`ColorRGB`). MSVC failed with `C2679: binary '=': no operator found which takes a right-hand operand of type 'resoprint::Vec3'`.
+- **Architectural Fix**: Added `inline ColorRGB MixRGB(ColorRGB a, ColorRGB b, float t)` and `ColorRGB Mix(ColorRGB, ColorRGB, float)` overload in `core/risoprint_core.h`. Updated plate proof calculations to linearly interpolate between paper white `ColorRGB{1.0f, 1.0f, 1.0f}` and `activeInks[i]` using `MixRGB`, strictly preserving semantic type boundaries between 3D vectors (`Vec3`) and optical color pixels (`ColorRGB`).
+
 ## [2.0.0] — 2026-10-24: Full Risograph Behavioral Reimplementation & Diagnostic Fixes
 
 ### Major Architectural Upgrades (Reference Reverse Engineering)

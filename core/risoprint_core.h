@@ -271,6 +271,14 @@ inline Vec3 Mix3(Vec3 a, Vec3 b, float t) {
     return { a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t };
 }
 
+inline ColorRGB MixRGB(ColorRGB a, ColorRGB b, float t) {
+    return { a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t };
+}
+
+inline ColorRGB Mix(ColorRGB a, ColorRGB b, float t) {
+    return { a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t };
+}
+
 inline float Luma3(ColorRGB c) {
     return c.r * 0.2126f + c.g * 0.7152f + c.b * 0.0722f;
 }
