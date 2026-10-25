@@ -944,3 +944,9 @@ extern "C" DllExport PF_Err EffectMain(
     }
     return err;
 }
+
+// Required by the After Effects Windows export definition (risoprint.def).
+// The .def file exports this symbol, so it must be defined in the linked module.
+extern "C" DllExport int PluginDataEntryFunction2(void*, void*, int, int) {
+    return 0;
+}
