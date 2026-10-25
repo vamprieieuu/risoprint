@@ -1,5 +1,7 @@
 #include "AEConfig.h"
 #include "AE_Effect.h"
+#include "AE_EffectPixelFormat.h"
+#include "AE_EffectCBSuites.h"
 #include "AE_EffectSuites.h"
 #include "AE_Macros.h"
 #include "Param_Utils.h"
@@ -574,13 +576,32 @@ static PF_Err GlobalSetup(
 // SmartRender & SmartPreRender
 // ---------------------------------------------------------------------------
 
+// Union two rectangles using the SDK's PF_LRect fields.
+static void UnionLRect(const PF_LRect* src, PF_LRect* dst) {
+    if (!src || !dst) return;
+
+    const bool srcEmpty = (src->right <= src->left) || (src->bottom <= src->top);
+    if (srcEmpty) return;
+
+    const bool dstEmpty = (dst->right <= dst->left) || (dst->bottom <= dst->top);
+    if (dstEmpty) {
+        *dst = *src;
+        return;
+    }
+
+    dst->left   = std::min(dst->left, src->left);
+    dst->top    = std::min(dst->top, src->top);
+    dst->right  = std::max(dst->right, src->right);
+    dst->bottom = std::max(dst->bottom, src->bottom);
+}
+
 static PF_Err PreRender(
     PF_InData* in_data,
     PF_OutData* out_data,
     PF_PreRenderExtra* extra
 ) {
     PF_Err err = PF_Err_NONE;
-    PF_RenderRequest req = extra->input->expected_request;
+    PF_RenderRequest req = extra->input->output_request;
     req.preserve_rgb_of_zero_alpha = 1;
 
     PF_CheckoutResult in_result;
