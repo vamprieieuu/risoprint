@@ -543,7 +543,7 @@ static PF_Err ParamsSetup(
 
     #undef ADD
 
-    out_data->num_params = NUM_PARAMS;
+    out_data->num_params = NUM_PARAMS + 1;
     return err;
 }
 
@@ -560,14 +560,11 @@ static PF_Err GlobalSetup(
     PF_Err err = PF_Err_NONE;
 
     out_data->my_version = PF_VERSION(MAJOR_VERSION, MINOR_VERSION, BUG_VERSION, STAGE_VERSION, BUILD_VERSION);
-    out_data->out_flags = PF_OutFlag_DEEP_COLOR_AWARE |
-                          PF_OutFlag_WIDE_TIME_INPUT   |
-                          PF_OutFlag_PIX_INDEPENDENT   |
-                          PF_OutFlag_USE_OUTPUT_EXTENT;
-
-    out_data->out_flags2 = PF_OutFlag2_SUPPORTS_SMART_RENDER |
-                           PF_OutFlag2_FLOAT_COLOR_AWARE     |
-                           PF_OutFlag2_DOESNT_NEED_EMPTY_PIXELS;
+    // These values must exactly match AE_Effect_Global_OutFlags and
+    // AE_Effect_Global_OutFlags_2 in risoprint_PiPL.r.
+    // Keep the established PiPL-compatible flags to prevent AE load errors.
+    out_data->out_flags = 0x02008004;
+    out_data->out_flags2 = 0x08001400;
 
     return err;
 }
@@ -945,8 +942,7 @@ extern "C" DllExport PF_Err EffectMain(
     return err;
 }
 
-// Required by the After Effects Windows export definition (risoprint.def).
-// The .def file exports this symbol, so it must be defined in the linked module.
+// Required exported entry point for the Windows After Effects plug-in.
 extern "C" DllExport int PluginDataEntryFunction2(void*, void*, int, int) {
     return 0;
 }
