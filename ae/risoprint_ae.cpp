@@ -1,8 +1,8 @@
 #include "AEConfig.h"
 #include "AE_Effect.h"
-#include "AE_EffectPixelFormat.h"
-#include "AE_EffectCBSuites.h"
 #include "AE_EffectSuites.h"
+#include "AE_EffectCBSuites.h"
+#include "AE_EffectPixelFormat.h"
 #include "AE_Macros.h"
 #include "Param_Utils.h"
 #include "entry.h"
@@ -576,19 +576,16 @@ static PF_Err GlobalSetup(
 // SmartRender & SmartPreRender
 // ---------------------------------------------------------------------------
 
-// Union two rectangles using the SDK's PF_LRect fields.
+// Merge two rectangles into the destination rectangle. Empty source rectangles
+// are ignored; an empty destination adopts the source rectangle.
 static void UnionLRect(const PF_LRect* src, PF_LRect* dst) {
-    if (!src || !dst) return;
-
-    const bool srcEmpty = (src->right <= src->left) || (src->bottom <= src->top);
-    if (srcEmpty) return;
-
-    const bool dstEmpty = (dst->right <= dst->left) || (dst->bottom <= dst->top);
-    if (dstEmpty) {
+    if (!src || !dst || src->left >= src->right || src->top >= src->bottom) {
+        return;
+    }
+    if (dst->left >= dst->right || dst->top >= dst->bottom) {
         *dst = *src;
         return;
     }
-
     dst->left   = std::min(dst->left, src->left);
     dst->top    = std::min(dst->top, src->top);
     dst->right  = std::max(dst->right, src->right);

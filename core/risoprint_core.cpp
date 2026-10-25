@@ -1122,13 +1122,13 @@ void RenderRisoprint(
                 float m = std::max(std::max(chDots[0], chDots[1]), std::max(chDots[2], chDots[3]));
                 finalRgb = { 1.0f - m, 1.0f - m, 1.0f - m };
             } else if (p.plateProof == 3) { // Cyan Separation
-                finalRgb = Mix3({1, 1, 1}, Vec3{activeInks[0].r, activeInks[0].g, activeInks[0].b}, chDots[0]);
+                finalRgb = Mix3({1, 1, 1}, {activeInks[0].r, activeInks[0].g, activeInks[0].b}, chDots[0]);
             } else if (p.plateProof == 4) { // Magenta Separation
-                finalRgb = Mix3({1, 1, 1}, Vec3{activeInks[1].r, activeInks[1].g, activeInks[1].b}, chDots[1]);
+                finalRgb = Mix3({1, 1, 1}, {activeInks[1].r, activeInks[1].g, activeInks[1].b}, chDots[1]);
             } else if (p.plateProof == 5) { // Yellow Separation
-                finalRgb = Mix3({1, 1, 1}, Vec3{activeInks[2].r, activeInks[2].g, activeInks[2].b}, chDots[2]);
+                finalRgb = Mix3({1, 1, 1}, {activeInks[2].r, activeInks[2].g, activeInks[2].b}, chDots[2]);
             } else if (p.plateProof == 6) { // Black Separation
-                finalRgb = Mix3({1, 1, 1}, Vec3{activeInks[3].r, activeInks[3].g, activeInks[3].b}, chDots[3]);
+                finalRgb = Mix3({1, 1, 1}, {activeInks[3].r, activeInks[3].g, activeInks[3].b}, chDots[3]);
             } else if (p.plateProof == 7) { // 4-Up Proof Grid
                 int qx = (uv.x < 0.5f) ? 0 : 1;
                 int qy = (uv.y < 0.5f) ? 0 : 1;
@@ -1138,7 +1138,7 @@ void RenderRisoprint(
                     finalRgb = { 0.2f, 0.2f, 0.2f };
                 } else {
                     int pIdx = (qy == 0) ? (qx == 0 ? 0 : 1) : (qx == 0 ? 2 : 3);
-                    finalRgb = Mix3({1, 1, 1}, Vec3{activeInks[pIdx].r, activeInks[pIdx].g, activeInks[pIdx].b}, chDots[pIdx]);
+                    finalRgb = Mix3({1, 1, 1}, {activeInks[pIdx].r, activeInks[pIdx].g, activeInks[pIdx].b}, chDots[pIdx]);
                 }
             }
 
