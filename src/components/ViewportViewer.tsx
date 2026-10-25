@@ -397,7 +397,7 @@ export const ViewportViewer: React.FC<ViewportViewerProps> = ({ params, renderMo
           </span>
 
           <span className="hidden sm:inline font-mono text-zinc-400">
-            Plates active: <strong className="text-cyan-400">{params.inks.filter((i) => i.enabled).length}/3</strong>
+            Plates active: <strong className="text-cyan-400">{[params.cyanPlateEn, params.magentaPlateEn, params.yellowPlateEn, params.blackPlateEn].filter(Boolean).length}/4</strong>
           </span>
         </div>
 
